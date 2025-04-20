@@ -33,7 +33,7 @@ if not sellRemote or not buyRemote then
     return
 end
 
--- State management
+-- state management
 local sellState = {
     active = false,
     count = 0,
@@ -45,7 +45,7 @@ local sellerPosition = nil
 local sellerHighlight = nil
 local highlightColor = Color3.fromRGB(0, 255, 170) -- default cyan
 
--- Create tabs
+--tabs
 local MainTab = Window:CreateTab("🕹️Controls", 4483362458)
 local SeedsTab = Window:CreateTab("🌽Seed Spammer", 4483362458)
 
@@ -88,7 +88,7 @@ MainTab:CreateToggle({
 
                         task.wait(0.2)
 
-                        -- Sell the items and update the count
+                        -- sell the items and update the count
                         local success = pcall(function()
                             sellRemote:FireServer()
                             sellState.count += 1
@@ -156,7 +156,7 @@ MainTab:CreateButton({
                 Image = 6026568198
             })
 
-            -- Create or update highlight part
+            -- create or update highlight part
             if not sellerHighlight then
                 local part = Instance.new("Part")
                 part.Anchored = true
@@ -169,7 +169,7 @@ MainTab:CreateButton({
                 part.Parent = workspace
                 sellerHighlight = part
 
-                -- Add a label above the marker
+                -- add a label above the marker
                 local label = Instance.new("BillboardGui")
                 label.Adornee = part
                 label.Size = UDim2.new(0, 100, 0, 50)
@@ -189,7 +189,7 @@ MainTab:CreateButton({
             sellerHighlight.Position = sellerPosition.Position
             sellerHighlight.Color = highlightColor
 
-            -- Add animation to the highlight
+            -- add animation to the highlight
             local tweenService = game:GetService("TweenService")
             local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true)
             local tweenGoal = {Size = Vector3.new(3.5, 3.5, 3.5)}
@@ -197,7 +197,7 @@ MainTab:CreateButton({
             local tween = tweenService:Create(sellerHighlight, tweenInfo, tweenGoal)
             tween:Play()
 
-            -- Rotate the part slowly for effect
+            -- rotate the part slowly for effect
             coroutine.wrap(function()
                 while true do
                     sellerHighlight.CFrame = sellerHighlight.CFrame * CFrame.Angles(0, math.rad(1), 0)
@@ -268,7 +268,7 @@ for _, seedName in pairs(seedList) do
     })
 end
 
--- **1. Seed Priority System**: You can create a priority system to spam more important seeds (or higher-value seeds) first. For example, you could add a slider to define which seed has the highest priority.
+-- **1. Seed Priority System**
 
 SeedsTab:CreateSlider({
     Name = "Seed Priority (higher value = higher priority)",
@@ -278,14 +278,11 @@ SeedsTab:CreateSlider({
     CurrentValue = 5,
     Flag = "SeedPrioritySlider",
     Callback = function(Value)
-        -- Implement the priority logic here
-        -- Higher Value = Priority for the Seed to be spammed
-        -- You can create your own system of 'priority' based on values like seed value, effectiveness, or personal preference.
+
     end
 })
 
--- **2. Delay Customization**: Add a delay customization that allows the user to adjust the time between each seed being spammed.
-
+-- **2. Delay Customization**
 SeedsTab:CreateSlider({
     Name = "Seed Spam Delay (seconds)",
     Range = {0.1, 2},
@@ -298,8 +295,7 @@ SeedsTab:CreateSlider({
     end
 })
 
--- **3. Randomized Seed Spamming**: Add a toggle option to randomize the seeds being spammed. This can be useful if you want to spam seeds without a specific order.
-
+-- **3. Randomized Seed Spamming**
 SeedsTab:CreateToggle({
     Name = "Randomize Seed Spamming",
     CurrentValue = false,
@@ -323,7 +319,7 @@ SeedsTab:CreateToggle({
     end
 })
 
--- **4. Stop All Seed Spammers Button**: Allow the user to stop all active seed spammers with one click.
+-- **4. Stop All Seed Spammers Button**
 
 SeedsTab:CreateButton({
     Name = "Stop All Seed Spammers",
@@ -341,7 +337,7 @@ SeedsTab:CreateButton({
     end
 })
 
--- Configuration
+-- Config
 local sellRemotePath = "GameEvents/Sell_Inventory"
 local buyRemotePath = "GameEvents/BuySeedStock"
 local defaultCooldown = 3
@@ -364,7 +360,7 @@ local harvestStates = {
     fovCircleRadius = 10
 }
 
--- Function to create and update FOV circle around the player
+-- function to create and update FOV circle
 local function createFovCircle()
     local player = game.Players.LocalPlayer
     local character = player.Character
@@ -393,7 +389,7 @@ end
 
 local fovCircle = createFovCircle()
 
--- ✅ UPDATED: Function to fire proximity prompts within range and on-screen
+-- function to fire proximity prompts within range and on-screen
 local function fireProximityPrompts()
     local player = game.Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
