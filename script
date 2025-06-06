@@ -22,6 +22,8 @@ local Window = Rayfield:CreateWindow({
 -- Get remotes
 local sellRemote = game:GetService("ReplicatedStorage"):FindFirstChild("GameEvents") and game:GetService("ReplicatedStorage").GameEvents:FindFirstChild("Sell_Inventory")
 local buyRemote = game:GetService("ReplicatedStorage"):FindFirstChild("GameEvents") and game:GetService("ReplicatedStorage").GameEvents:FindFirstChild("BuySeedStock")
+local gearRemote = game:GetService("ReplicatedStorage"):FindFirstChild("GameEvents") and game:GetService("ReplicatedStorage").GameEvents:FindFirstChild("BuyGearStock")
+
 
 if not sellRemote or not buyRemote then
     Rayfield:Notify({
@@ -43,11 +45,12 @@ local sellState = {
 
 local sellerPosition = nil
 local sellerHighlight = nil
-local highlightColor = Color3.fromRGB(0, 255, 170) -- default cyan
+local highlightColor = Color3.fromRGB(0, 255, 60) -- default cyan
 
 --tabs
 local MainTab = Window:CreateTab("🕹️Controls", 4483362458)
-local SeedsTab = Window:CreateTab("🌽Seed Spammer", 4483362458)
+local SeedsTab = Window:CreateTab("🌽Seed Shop", 4483362458)
+local GearsTab = Window:CreateTab("🎮 Gear Shop", 4483362458)
 
 -- ===== MAIN CONTROLS =====
 MainTab:CreateSection("Core Settings")
@@ -162,7 +165,7 @@ MainTab:CreateButton({
                 part.Anchored = true
                 part.CanCollide = false
                 part.Size = Vector3.new(3, 3, 3)
-                part.Material = Enum.Material.Neon
+                part.Material = Enum.Material.ForceField
                 part.Color = highlightColor
                 part.Transparency = 0.25
                 part.Name = "SellerMarker"
@@ -182,8 +185,12 @@ MainTab:CreateButton({
                 textLabel.Text = "Seller Zone"
                 textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
                 textLabel.BackgroundTransparency = 1
+                textLabel.TextStrokeTransparency = 0
+                textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
                 textLabel.TextScaled = true
-                textLabel.Parent = label
+                 textLabel.Font = Enum.Font.FredokaOne
+                 textLabel.Parent = label
+
             end
 
             sellerHighlight.Position = sellerPosition.Position
@@ -228,12 +235,12 @@ MainTab:CreateColorPicker({
     end
 })
 
--- ===== SEED SPAMMER =====
+-- ===== Seed Shop =====
 SeedsTab:CreateSection("Select Seeds to Auto-Spam")
 
 local seedList = {
     "Carrot", "Strawberry", "Blueberry", "Orange Tulip", "Tomato", "Corn",
-    "Daffodil", "Watermelon", "Pumpkin", "Apple", "Bamboo", "Coconut", "Cactus", "Dragon", "Mango", "Grape"
+    "Daffodil", "Watermelon", "Pumpkin", "Apple", "Bamboo", "Coconut", "Cactus", "Dragon", "Mango", "Grape", "Mushroom", "Pepper", "Cacao", "Beanstalk"
 }
 
 local seedSpamStates = {}
@@ -337,6 +344,114 @@ SeedsTab:CreateButton({
     end
 })
 
+-- ===== Gear Shop =====
+GearsTab:CreateSection("Gear Shop remote buyer")
+
+local gearList = {
+    "Watering Can", "Trowel", "Recall Wrench", "Basic Sprinkler", "Advanced Sprinkler", "Godly Sprinkler", "Lightning Rod", "Master Sprinkler", "Favorite Tool", "Harvest Tool"
+}
+
+local gearSpamStates = {}
+
+for _, gearName in pairs(gearList) do
+    local flagName = "Spam_"..gearName:gsub(" ", "_")
+    gearSpamStates[gearName] = {
+        active = false,
+        flag = flagName
+    }
+
+    GearsTab:CreateToggle({
+        Name = "Spam "..gearName,
+        CurrentValue = false,
+        Flag = flagName,
+        Callback = function(Value)
+            gearSpamStates[gearName].active = Value
+            if Value then
+                coroutine.wrap(function()
+                    while gearSpamStates[gearName].active do
+                        local args = { [1] = gearName }
+
+                        pcall(function()
+                            -- Fire the BuySeedStock remote for the selected seed
+                            gearRemote:FireServer(unpack(args))
+                        end)
+                        task.wait(0.2)
+                    end
+                end)()
+            end
+        end
+    })
+end
+
+-- **1. Gear Priority System**
+
+GearsTab:CreateSlider({
+    Name = "Gear Prioruty (higher value = higher priority)",
+    Range = {1, 10},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = 5,
+    Flag = "GaerPrioritySlider",
+    Callback = function(Value)
+
+    end
+})
+
+-- **2. Delay Customization**
+GearsTab:CreateSlider({
+    Name = "Gear spam  Delay (seconds)",
+    Range = {0.1, 2},
+    Increment = 0.1,
+    Suffix = "s",
+    CurrentValue = 0.2,
+    Flag = "GearDelaySlider",
+    Callback = function(Value)
+        GearSpamDelay = Value
+    end
+})
+
+-- **3. Randomized Gear Spamming**
+GearsTab:CreateToggle({
+    Name = "Randomize Gear Spamming",
+    CurrentValue = false,
+    Flag = "RandomizeGearToggle",
+    Callback = function(Value)
+        randomizeGears = Value
+        if randomizeGears then
+            -- Implement random selection of seeds and start spamming them
+            coroutine.wrap(function()
+                while randomizeGears do
+                    local randomGear = GearList[math.random(1, #gearList)]
+                    local args = { [1] = randomGear }
+
+                    pcall(function()
+                        gearRemote:FireServer(unpack(args))
+                    end)
+                    task.wait(gearSpamDelay)
+                end
+            end)()
+        end
+    end
+})
+
+-- **4. Stop All Gear Spammers Button**
+
+GearsTab:CreateButton({
+    Name = "Stop All Gear Spammers",
+    Callback = function()
+        for GearName, data in pairs(GearSpamStates) do
+            data.active = false
+            Rayfield.Flags[data.flag]:Set(false)
+        end
+        Rayfield:Notify({
+            Title = "All Gear Spammers Stopped",
+            Content = "All active Gear spammers have been disabled.",
+            Duration = 5,
+            Image = 6023426926
+        })
+    end
+})
+
 -- Config
 local sellRemotePath = "GameEvents/Sell_Inventory"
 local buyRemotePath = "GameEvents/BuySeedStock"
@@ -346,12 +461,12 @@ local defaultCooldown = 3
 -- Get remotes
 local sellRemote = game:GetService("ReplicatedStorage"):FindFirstChild("GameEvents") and game:GetService("ReplicatedStorage").GameEvents:FindFirstChild("Sell_Inventory")
 local buyRemote = game:GetService("ReplicatedStorage"):FindFirstChild("GameEvents") and game:GetService("ReplicatedStorage").GameEvents:FindFirstChild("BuySeedStock")
+local gearRemote = game:GetService("ReplicatedStorage"):FindFirstChild("GameEvents") and game:GetService("ReplicatedStorage").GameEvents:FindFirstChild("BuyGearStock")
 
--- Harvest tab
-
+-- 🌾 Harvest tab
 local HarvestTab = Window:CreateTab("🚜Auto Harverster", 4483362458)
 
--- Variables
+-- 🔧 Variables
 local harvestStates = {
     fireProximity = false,
     fireLoop = nil,
@@ -360,13 +475,21 @@ local harvestStates = {
     fovCircleRadius = 10
 }
 
--- function to create and update FOV circle
+local fovCircleColor = Color3.fromRGB(255, 0, 0)
+local fovCircle
+
+-- 🔵 Function to create/update FOV circle
 local function createFovCircle()
     local player = game.Players.LocalPlayer
     local character = player.Character
     if not character then return end
 
-    local fovCircle = Instance.new("Part")
+    -- Destroy old one if it exists
+    if fovCircle then
+        fovCircle:Destroy()
+    end
+
+    fovCircle = Instance.new("Part")
     fovCircle.Shape = Enum.PartType.Ball
     fovCircle.Size = Vector3.new(harvestStates.fovCircleRadius * 2, harvestStates.fovCircleRadius * 2, harvestStates.fovCircleRadius * 2)
     fovCircle.Position = character.HumanoidRootPart.Position - Vector3.new(0, 5, 0)
@@ -374,22 +497,35 @@ local function createFovCircle()
     fovCircle.CanCollide = false
     fovCircle.Parent = workspace
     fovCircle.Material = Enum.Material.ForceField
-    fovCircle.Color = Color3.fromRGB(255, 0, 0)
+    fovCircle.Color = fovCircleColor
     fovCircle.Reflectance = 0
-    fovCircle.Transparency = 0
+    fovCircle.Transparency = 0.5
 
+    -- Update its position continuously
     game:GetService("RunService").Heartbeat:Connect(function()
-        if character and character:FindFirstChild("HumanoidRootPart") then
+        if character and character:FindFirstChild("HumanoidRootPart") and fovCircle then
             fovCircle.Position = character.HumanoidRootPart.Position - Vector3.new(0, 5, 0)
         end
     end)
-
-    return fovCircle
 end
 
-local fovCircle = createFovCircle()
+-- 🎨 FOV Circle Color Picker
+HarvestTab:CreateColorPicker({
+    Name = "FovCircleColor",
+    Color = fovCircleColor,
+    Flag = "FovCircleColor",
+    Callback = function(Value)
+        fovCircleColor = Value
+        if fovCircle then
+            fovCircle.Color = Value
+        end
+    end
+})
 
--- function to fire proximity prompts within range and on-screen
+-- 🔄 Initial creation of the circle
+createFovCircle()
+
+-- ⚙️ Function to fire proximity prompts
 local function fireProximityPrompts()
     local player = game.Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
@@ -413,7 +549,7 @@ local function fireProximityPrompts()
                 if promptPosition then
                     local distance = (hrp.Position - promptPosition).Magnitude
                     if distance <= harvestStates.fireRange then
-                        local screenPoint, onScreen = camera:WorldToViewportPoint(promptPosition)
+                        local _, onScreen = camera:WorldToViewportPoint(promptPosition)
                         if onScreen then
                             pcall(function()
                                 fireproximityprompt(descendant)
@@ -428,7 +564,7 @@ local function fireProximityPrompts()
     end
 end
 
--- Toggle for firing proximity prompts
+-- ✅ Toggle: Auto fire proximity prompts
 HarvestTab:CreateToggle({
     Name = "Enable Fire Proximity Prompts",
     CurrentValue = false,
@@ -452,7 +588,7 @@ HarvestTab:CreateToggle({
     end
 })
 
--- Slider for fire rate delay
+-- ⏱️ Slider: Delay between fires
 HarvestTab:CreateSlider({
     Name = "Fire Rate Delay (seconds)",
     Range = {0.5, 1},
@@ -464,7 +600,7 @@ HarvestTab:CreateSlider({
     end
 })
 
--- Slider for fire range and FOV circle radius
+-- 📏 Slider: Fire Range & Circle Radius
 HarvestTab:CreateSlider({
     Name = "Fire Range & FOV Circle Radius (studs)",
     Range = {5, 15},
@@ -480,6 +616,7 @@ HarvestTab:CreateSlider({
     end
 })
 
+
 -- Initialize
 Rayfield:Notify({
     Title = "Auto Harvest Loaded",
@@ -487,3 +624,120 @@ Rayfield:Notify({
     Duration = 5,
     Image = 4483362458,
 })
+
+-- Server-side part highlight teleportation 
+
+-- Highlight Colors
+local highlightColors = {
+    gearShop = Color3.fromRGB(0, 255, 100),        -- Green
+    petEggs = Color3.fromRGB(255, 255, 102),       -- Yellowish
+    currentEvent = Color3.fromRGB(255, 255, 0)     -- Yellow
+}
+
+-- Marker Positions
+local gearShopPos = Vector3.new(-281.5836, 4.2662, -33.2866)
+local petEggsPos = Vector3.new(-281.8767, 4, -1.9715)  -- was questGiverPos
+local currentEventPos = Vector3.new(-99.6171, 4.0000, -7.5551)
+
+-- Create highlight in world
+local function createHighlight(name, position, highlightColor)
+    local part = Instance.new("Part")
+    part.Anchored = true
+    part.CanCollide = false
+    part.Size = Vector3.new(3, 3, 3)
+    part.Material = Enum.Material.ForceField
+    part.Color = highlightColor
+    part.Transparency = 0.5
+    part.Name = name .. "Marker"
+    part.CFrame = CFrame.new(position)
+    part.Parent = workspace
+
+    local label = Instance.new("BillboardGui")
+    label.Adornee = part
+    label.Size = UDim2.new(0, 100, 0, 50)
+    label.StudsOffset = Vector3.new(0, 3, 0)
+    label.AlwaysOnTop = true
+    label.Parent = part
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.Text = name
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    textLabel.BackgroundTransparency = 1
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.FredokaOne
+    textLabel.Parent = label
+
+    local tweenService = game:GetService("TweenService")
+    local tweenInfo = TweenInfo.new(0.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, true)
+    local tweenGoal = {Size = Vector3.new(3.5, 3.5, 3.5)}
+    local tween = tweenService:Create(part, tweenInfo, tweenGoal)
+    tween:Play()
+
+    coroutine.wrap(function()
+        while true do
+            part.CFrame = part.CFrame * CFrame.Angles(0, math.rad(1), 0)
+            task.wait(0.05)
+        end
+    end)()
+end
+
+-- Wait for LocalPlayer
+local Players = game:GetService("Players")
+local player = Players.LocalPlayer or Players.PlayerAdded:Wait()
+
+-- Styled UI
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "StyledTeleportButtons"
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local function createStyledButton(name, position, color, callback)
+    local button = Instance.new("ImageButton")
+    button.Size = UDim2.new(0, 150, 0, 50)
+    button.Position = UDim2.new(0, position.X, 0, position.Y)
+    button.BackgroundColor3 = color
+    button.AutoButtonColor = false
+    button.Image = "rbxassetid://7076341519" -- Brick texture
+    button.ScaleType = Enum.ScaleType.Tile
+    button.TileSize = UDim2.new(0, 50, 0, 50)
+    button.Parent = screenGui
+
+    local text = Instance.new("TextLabel")
+    text.Size = UDim2.new(1, 0, 1, 0)
+    text.BackgroundTransparency = 1
+    text.Text = name
+    text.Font = Enum.Font.FredokaOne
+    text.TextScaled = true
+    text.TextColor3 = Color3.fromRGB(255, 255, 255)
+    text.TextStrokeTransparency = 0
+    text.TextStrokeColor3 = Color3.new(0, 0, 0)
+    text.Parent = button
+
+    button.MouseButton1Click:Connect(callback)
+end
+
+-- Create highlights with the correct highlight color
+createHighlight("Gear Shop", gearShopPos, highlightColors.gearShop)
+createHighlight("Pet Eggs", petEggsPos, highlightColors.petEggs)
+createHighlight("Current Event", currentEventPos, highlightColors.currentEvent)
+
+-- Create styled buttons
+createStyledButton("Gear Shop", Vector3.new(1165, 100, 0), Color3.fromRGB(0, 200, 0), function()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    hrp.CFrame = CFrame.new(gearShopPos + Vector3.new(0, 3, 0))
+end)
+
+createStyledButton("Pet Eggs", Vector3.new(605, 100, 0), Color3.fromRGB(255, 255, 102), function()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    hrp.CFrame = CFrame.new(petEggsPos + Vector3.new(0, 3, 0))
+end)
+
+createStyledButton("Current Event", Vector3.new(890, 100, 0), Color3.fromRGB(255, 255, 0), function()
+    local char = player.Character or player.CharacterAdded:Wait()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    hrp.CFrame = CFrame.new(currentEventPos + Vector3.new(0, 3, 0))
+end)
