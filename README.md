@@ -1,2 +1,2 @@
 # grow-a-garden
-script
+outdated as shi
